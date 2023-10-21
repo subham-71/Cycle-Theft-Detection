@@ -6,6 +6,9 @@ import torchvision.transforms as transforms
 import json
 import matplotlib.pyplot as plt
 import torchvision
+import json
+import numpy as np
+from collections import defaultdict
 
 class Autoencoder(nn.Module):
     def __init__(self):
@@ -63,7 +66,7 @@ class Inference():
             # Update the output JSON
             self.update_json_with_timestamp(output_json, timestamps[-1], error)
             self.plot_anomaly_scores(timestamps, anomaly_scores,plot_path)
-            # self.detect_anomalies(output_json, 5, 2.0,anomalies_path)
+            self.detect_anomalies(output_json, 5, 3,4,2,anomalies_path)
 
 
         cap.release()
@@ -82,32 +85,34 @@ class Inference():
         with open(output_json, 'w') as f:
             json.dump(data, f)
 
-    # def detect_anomalies(self, json_path, window_size, threshold, anomalies_path):
-    #     with open(json_path, 'r') as f:
-    #         data = json.load(f)
+    def detect_anomalies(self,json_path, window_size, min_duration, max_duration, top_k, output_anomalies_path):
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+        
+        timestamps = list(map(float, data.keys()))
+        scores = list(data.values())
 
-    #     timestamps = list(map(float, data.keys()))
-    #     scores = list(data.values())
+        heightened_periods = defaultdict(float)
+        max_heightened_score = 0.0
+        start_time = 0
 
-    #     if len(scores) < window_size:
-    #         print(f'Not enough data points for window size {window_size}. Skipping detection.')
-    #         return []
+        for i in range(len(scores)):
+            if i - window_size >= 0:
+                avg_score = np.mean(scores[i-window_size+1:i+1])
+                heightened_periods[(start_time, timestamps[i])] = avg_score
+                max_heightened_score = max(max_heightened_score, avg_score)
 
-    #     rolling_mean = np.convolve(scores, np.ones(window_size) / window_size, mode='valid')
-    #     rolling_std = np.std([scores[i:i+window_size] for i in range(len(scores) - window_size + 1)], axis=0)
-    #     z_scores = (scores[window_size-1:] - rolling_mean) / rolling_std
+            if scores[i] > max_heightened_score:
+                start_time = timestamps[i]
+                max_heightened_score = scores[i]
 
-    #     anomalies = []
-
-    #     for i, z_score in enumerate(z_scores):
-    #         if z_score > threshold:
-    #             anomaly_period = timestamps[i:i+window_size]
-    #             anomalies.append(anomaly_period)
-
-    #     with open(anomalies_path, 'w') as f:
-    #         json.dump(anomalies, f)
-
-    #     return anomalies
+        sorted_periods = sorted(heightened_periods.items(), key=lambda x: x[1], reverse=True)
+        filtered_periods = [(start, end, score) for (start, end), score in sorted_periods 
+                            if end - start >= min_duration and end - start <= max_duration]
+        
+        
+        with open(output_anomalies_path, 'w') as f:
+            json.dump(filtered_periods[:top_k], f)
 
 
     def plot_anomaly_scores(self,timestamps, anomaly_scores, save_path):
@@ -124,9 +129,9 @@ model.load_state_dict(torch.load('models/anomaly_detector.pth', map_location='cp
 model.eval()
 
 video_path = 'data/anomaly/theftPick.avi'
-output_json = 'results/output2.json'
-plot_path = 'results/plot2.png'
-anomalies_path = 'results/anomalies.json'
+output_json = 'results/output-demo.json'
+plot_path = 'results/plot-demo.png'
+anomalies_path = 'results/anomalies-demo.json'
 
 inf = Inference()
 inf.process_video(model, video_path, output_json,plot_path,anomalies_path)

@@ -63,7 +63,7 @@ class Inference():
             # Update the output JSON
             self.update_json_with_timestamp(output_json, timestamps[-1], error)
             self.plot_anomaly_scores(timestamps, anomaly_scores,plot_path)
-            self.detect_anomalies(output_json, 5, 2.0,anomalies_path)
+            # self.detect_anomalies(output_json, 5, 2.0,anomalies_path)
 
 
         cap.release()
@@ -82,35 +82,39 @@ class Inference():
         with open(output_json, 'w') as f:
             json.dump(data, f)
 
-    def detect_anomalies(self,json_path, window_size, threshold,anomalies_path):
-        with open(json_path, 'r') as f:
-            data = json.load(f)
-        
-        timestamps = list(map(float, data.keys()))
-        scores = list(data.values())
-        
-        # Calculate Z-scores
-        rolling_mean = np.convolve(scores, np.ones(window_size)/window_size, mode='valid')
-        rolling_std = np.std([scores[i:i+window_size] for i in range(len(scores)-window_size+1)], axis=1)
-        z_scores = (scores[window_size-1:] - rolling_mean) / rolling_std
-        
-        anomalies = []
-        
-        # Find timestamps with high Z-scores
-        for i, z_score in enumerate(z_scores):
-            if z_score > threshold:
-                anomaly_period = timestamps[i:i+window_size]
-                anomalies.append(anomaly_period)
+    # def detect_anomalies(self, json_path, window_size, threshold, anomalies_path):
+    #     with open(json_path, 'r') as f:
+    #         data = json.load(f)
 
-        with open(anomalies_path, 'w') as f:
-            json.dump(anomalies, f)
+    #     timestamps = list(map(float, data.keys()))
+    #     scores = list(data.values())
+
+    #     if len(scores) < window_size:
+    #         print(f'Not enough data points for window size {window_size}. Skipping detection.')
+    #         return []
+
+    #     rolling_mean = np.convolve(scores, np.ones(window_size) / window_size, mode='valid')
+    #     rolling_std = np.std([scores[i:i+window_size] for i in range(len(scores) - window_size + 1)], axis=0)
+    #     z_scores = (scores[window_size-1:] - rolling_mean) / rolling_std
+
+    #     anomalies = []
+
+    #     for i, z_score in enumerate(z_scores):
+    #         if z_score > threshold:
+    #             anomaly_period = timestamps[i:i+window_size]
+    #             anomalies.append(anomaly_period)
+
+    #     with open(anomalies_path, 'w') as f:
+    #         json.dump(anomalies, f)
+
+    #     return anomalies
+
 
     def plot_anomaly_scores(self,timestamps, anomaly_scores, save_path):
         plt.plot(timestamps, anomaly_scores, label='Anomaly Score', color='blue')
         plt.xlabel('Time (s)')
         plt.ylabel('Anomaly Score')
         plt.title('Anomaly Detection')
-        plt.legend()
         plt.savefig(save_path)  
 
     
@@ -119,9 +123,9 @@ model = Autoencoder()
 model.load_state_dict(torch.load('models/anomaly_detector.pth', map_location='cpu'))  # Load on CPU
 model.eval()
 
-video_path = 'videos/x.mp4'
-output_json = 'results/output.json'
-plot_path = 'results/plot.png'
+video_path = 'data/anomaly/theftPick.avi'
+output_json = 'results/output2.json'
+plot_path = 'results/plot2.png'
 anomalies_path = 'results/anomalies.json'
 
 inf = Inference()

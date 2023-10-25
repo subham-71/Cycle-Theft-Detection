@@ -57,7 +57,7 @@ This project showcases an efficient Cycle Theft Detection Model that leverages t
 
 **Anomaly Analysis**:
 
-- The `detect_anomalies` method in `inference.py` identifies heightened periods based on anomaly scores. We also have a separate `detect_anomalies.py` for analysing the trends.
+- The `detect_anomalies` method in `inference.py` identifies heightened periods based on anomaly scores. We also have a separate `detect_anomalies.py` for analysing the trends. The results containing the suspicious periods are stored in the `anomalies.json` file under the results folder.
 
 ## GitHub Repository Structure
 
